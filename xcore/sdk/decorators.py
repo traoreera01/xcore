@@ -198,11 +198,14 @@ class RoutedPlugin:
             bound = getattr(self, attr_name)
 
             def make_handler(fn):
+                # Bolt: Pre-calculate is_async to avoid expensive inspect.iscoroutinefunction call on every request
+                is_async = inspect.iscoroutinefunction(fn)
+
                 @functools.wraps(fn)
                 async def handler(**kwargs):
                     return (
                         await fn(**kwargs)
-                        if inspect.iscoroutinefunction(fn)
+                        if is_async
                         else fn(**kwargs)
                     )
 

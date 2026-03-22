@@ -116,16 +116,26 @@ class EventBus:
         to_remove: list[_HandlerEntry] = []
 
         if gather:
-            # Wrap synchronous handlers in coroutines only when gathering
-            async def _call_sync(h, e):
-                return h(e)
+            # Bolt: Optimize by running synchronous handlers directly to avoid coroutine creation overhead and GC pressure.
+            tasks = []
+            async_indices = []
+            raw = [None] * len(handlers)
 
-            tasks = [
-                entry.handler(event) if entry.is_async else _call_sync(entry.handler, event)
-                for entry in handlers
-            ]
+            for i, entry in enumerate(handlers):
+                if entry.is_async:
+                    tasks.append(entry.handler(event))
+                    async_indices.append(i)
+                else:
+                    try:
+                        raw[i] = entry.handler(event)
+                    except Exception as e:
+                        raw[i] = e
 
-            raw = await asyncio.gather(*tasks, return_exceptions=True)
+            if tasks:
+                async_raw = await asyncio.gather(*tasks, return_exceptions=True)
+                for i, result in zip(async_indices, async_raw):
+                    raw[i] = result
+
             for entry, result in zip(handlers, raw):
                 if isinstance(result, Exception):
                     logger.error(
