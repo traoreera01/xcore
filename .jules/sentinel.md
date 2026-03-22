@@ -7,3 +7,8 @@
 **Vulnerability:** The `ManifestValidator._inject_dotenv` method allowed loading `.env` files from outside the plugin directory via the `env_file` manifest parameter.
 **Learning:** Even when using `Path` objects, concatenating a base directory with a user-provided relative path containing `..` can escape the intended directory if not explicitly validated after resolution.
 **Prevention:** Always use `.resolve()` on the final path and verify it stays within the intended base directory using `.is_relative_to(base_dir.resolve())`.
+
+## 2026-03-22 - Bypass of AST Security Scanner via Nested Calls
+**Vulnerability:** The `ASTScanner` failed to detect forbidden function calls (like `eval`, `exec`) when nested within other expressions (e.g., `print(eval(x))`).
+**Learning:** An `ast.NodeVisitor` that implements `visit_Call` without calling `self.generic_visit(node)` stops the traversal at that node, missing any nested function calls.
+**Prevention:** Always call `self.generic_visit(node)` (or manually traverse children) in custom `visit_*` methods unless you explicitly intend to stop the search in that subtree.
