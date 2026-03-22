@@ -477,5 +477,4 @@ Document your events:
 ## Next Steps
 
 - [Security Best Practices](security.md)
-- [Testing Plugins](testing.md)
-- [Advanced Patterns](advanced-patterns.md)
+- [Testing](../development/testing.md)

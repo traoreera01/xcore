@@ -1,6 +1,6 @@
 # ⚡ XCore Framework
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/traoreera/xcore)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/traoreera/xcore)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.118+-green.svg)](https://fastapi.tiangolo.com/)
@@ -53,10 +53,14 @@ flowchart TB
    ```bash
    make run-dev
    ```
-### or use pip to install and use it
-    ```bash
-        uv add https://github.com/traoreera/xcore
-    ```
+
+### Using pip or uv
+
+```bash
+pip install xcore
+# or
+uv add xcore
+```
 
 ---
 
@@ -69,7 +73,7 @@ from fastapi import FastAPI
 from xcore import Xcore
 from contextlib import asynccontextmanager
 
-xcore = Xcore(config_path="xcore.yaml")
+xcore = Xcore(config_path="integration.yaml")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -84,9 +88,10 @@ app = FastAPI(lifespan=lifespan)
 
 ```python
 from xcore import Xcore
+import asyncio
 
 async def main():
-    app = Xcore()
+    app = Xcore(config_path="integration.yaml")
     await app.boot()
     
     # Call a plugin action
@@ -94,6 +99,9 @@ async def main():
     print(result)
     
     await app.shutdown()
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
 ---

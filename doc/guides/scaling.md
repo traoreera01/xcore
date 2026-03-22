@@ -1,21 +1,21 @@
-# Scaling et Haute Disponibilité
+# Scaling and High Availability
 
-Ce guide couvre les stratégies de scaling pour déployer XCore en production avec haute disponibilité.
+This guide covers scaling strategies for deploying XCore in production with high availability.
 
-## Vue d'ensemble
+## Overview
 
-XCore supporte plusieurs modes de déploiement :
+XCore supports several deployment modes:
 
-- **Single Instance** — Développement et petites charges
-- **Multi-Instance** — Scaling horizontal avec load balancer
-- **Cluster Mode** — Plusieurs nœuds avec coordination
+- **Single Instance** — Development and small loads
+- **Multi-Instance** — Horizontal scaling with a load balancer
+- **Cluster Mode** — Multiple nodes with coordination
 
-## Architecture de Scaling
+## Scaling Architecture
 
 ```
                     ┌─────────────────┐
-                    │   Load Balancer │
-                    │   (Nginx/HAProxy)│
+                    │  Load Balancer  │
+                    │ (Nginx/HAProxy) │
                     └────────┬────────┘
                              │
         ┌────────────────────┼────────────────────┐
@@ -29,26 +29,26 @@ XCore supporte plusieurs modes de déploiement :
         └────────────────────┼────────────────────┘
                              │
                     ┌────────▼────────┐
-                    │   Redis Cluster │
-                    │  (Cache + Queue) │
+                    │  Redis Cluster  │
+                    │ (Cache + Queue) │
                     └─────────────────┘
                              │
               ┌──────────────┼──────────────┐
               │              │              │
        ┌──────▼──────┐ ┌──────▼──────┐ ┌──────▼──────┐
-       │ PostgreSQL  │ │ PostgreSQL  │ │ PostgreSQL  │
+       │  PostgreSQL │ │  PostgreSQL │ │  PostgreSQL │
        │   Primary   │ │   Replica   │ │   Replica   │
        └─────────────┘ └─────────────┘ └─────────────┘
 ```
 
-## Configuration Multi-Instance
+## Multi-Instance Configuration
 
 ### 1. Load Balancer (Nginx)
 
 ```nginx
 # /etc/nginx/conf.d/xcore.conf
 upstream xcore_backend {
-    least_conn;  # Load balancing par connexion
+    least_conn;  # Load balancing by connection
 
     server 192.168.1.10:8080 weight=5;
     server 192.168.1.11:8080 weight=5;
@@ -83,10 +83,10 @@ server {
 }
 ```
 
-### 2. Configuration Redis Cluster
+### 2. Redis Cluster Configuration
 
 ```yaml
-# xcore.yaml
+# integration.yaml
 services:
   cache:
     backend: redis
@@ -109,7 +109,7 @@ services:
     max_instances: 3
 ```
 
-### 3. Base de Données avec Réplication
+### 3. Database with Replication
 
 ```yaml
 services:
@@ -135,20 +135,20 @@ services:
 
 ## Session Distribution
 
-### Sessions Redis
+### Redis Sessions
 
 ```python
-# Configuration des sessions distribuées
-# xcore.yaml
+# Distributed sessions configuration
+# integration.yaml
 plugins:
   session_manager:
     backend: redis
     redis_url: "${REDIS_URL}"
     key_prefix: "session:"
-    ttl: 3600  # 1 heure
+    ttl: 3600  # 1 hour
 ```
 
-### Plugin de Session
+### Session Plugin
 
 ```python
 # plugins/session_manager/main.py
@@ -187,9 +187,9 @@ class Plugin(TrustedBase):
         return ok()
 ```
 
-## Task Queue Distribuée
+## Distributed Task Queue
 
-### Configuration Celery avec Redis
+### Celery Configuration with Redis
 
 ```python
 # myapp/tasks/celery_config.py
@@ -204,7 +204,7 @@ app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
-    # Configuration du worker
+    # Worker configuration
     worker_prefetch_multiplier=4,
     worker_max_tasks_per_child=1000,
     # Retry
@@ -213,7 +213,7 @@ app.conf.update(
 )
 ```
 
-### Service de Queue
+### Queue Service
 
 ```python
 # myapp/services/task_queue.py
@@ -222,7 +222,7 @@ from celery import Celery
 
 
 class TaskQueueService(BaseService):
-    """Service de task queue avec Celery."""
+    """Task queue service with Celery."""
 
     name = "task_queue"
 
@@ -253,7 +253,7 @@ class TaskQueueService(BaseService):
 
     async def health_check(self) -> tuple[bool, str]:
         try:
-            # Vérifier la connexion au broker
+            # Check broker connection
             conn = self._app.connection()
             conn.ensure_connection(max_retries=1)
             return True, "Broker connection OK"
@@ -268,7 +268,7 @@ class TaskQueueService(BaseService):
         }
 
     def send_task(self, name: str, args: tuple = (), kwargs: dict = None, queue: str = "default") -> str:
-        """Envoyer une tâche."""
+        """Send a task."""
         result = self._app.send_task(
             name,
             args=args,
@@ -278,14 +278,14 @@ class TaskQueueService(BaseService):
         return result.id
 
     def get_result(self, task_id: str, timeout: int = 10):
-        """Récupérer le résultat d'une tâche."""
+        """Get the result of a task."""
         result = self._app.AsyncResult(task_id)
         return result.get(timeout=timeout)
 ```
 
-## Load Balancing avec Health Checks
+## Load Balancing with Health Checks
 
-### Plugin de Health Check Distribué
+### Distributed Health Check Plugin
 
 ```python
 # plugins/health_monitor/main.py
@@ -310,7 +310,7 @@ class Plugin(TrustedBase):
         return f"xcore-{uuid.uuid4().hex[:8]}"
 
     async def _heartbeat_loop(self):
-        """Envoyer un heartbeat périodiquement."""
+        """Send a heartbeat periodically."""
         while True:
             try:
                 await self.cache.set(
@@ -341,8 +341,8 @@ class Plugin(TrustedBase):
 
         @router.get("/cluster/health")
         async def cluster_health():
-            """État de santé de tout le cluster."""
-            # Récupérer tous les heartbeats
+            """Health status of the entire cluster."""
+            # Retrieve all heartbeats
             keys = await self.cache.keys("health:*")
             instances = []
 
@@ -355,7 +355,7 @@ class Plugin(TrustedBase):
                         **data
                     })
 
-            # Vérifier les instances manquantes
+            # Check for missing instances
             now = time.time()
             healthy = [i for i in instances if now - i["timestamp"] < 30]
 
@@ -368,9 +368,9 @@ class Plugin(TrustedBase):
         return router
 ```
 
-## Rate Limiting Distribué
+## Distributed Rate Limiting
 
-### Rate Limiter avec Redis
+### Rate Limiter with Redis
 
 ```python
 # plugins/rate_limiter/main.py
@@ -389,15 +389,15 @@ class Plugin(TrustedBase):
         limit: int,
         window: int
     ) -> tuple[bool, dict]:
-        """Vérifier si une requête respecte le rate limit."""
+        """Check if a request respects the rate limit."""
         now = int(time.time())
         window_start = now - (now % window)
         cache_key = f"ratelimit:{key}:{window_start}"
 
-        # Incrémenter le compteur
+        # Increment counter
         current = await self.cache.increment(cache_key, 1)
 
-        # Définir l'expiration si nouvelle fenêtre
+        # Set expiration if new window
         if current == 1:
             await self.cache.expire(cache_key, window)
 
@@ -428,7 +428,7 @@ class Plugin(TrustedBase):
 
 ## Circuit Breaker
 
-### Pattern Circuit Breaker
+### Circuit Breaker Pattern
 
 ```python
 # myapp/utils/circuit_breaker.py
@@ -445,7 +445,7 @@ class CircuitState(Enum):
 
 
 class CircuitBreaker:
-    """Circuit breaker pattern pour la résilience."""
+    """Circuit breaker pattern for resilience."""
 
     def __init__(
         self,
@@ -468,14 +468,14 @@ class CircuitBreaker:
     @property
     def state(self) -> CircuitState:
         if self._state == CircuitState.OPEN:
-            # Vérifier si on peut passer en half-open
+            # Check if can pass to half-open
             if time.time() - self._last_failure_time > self.recovery_timeout:
                 self._state = CircuitState.HALF_OPEN
                 self._half_open_calls = 0
         return self._state
 
     async def call(self, func: Callable, *args, **kwargs):
-        """Appeler une fonction avec circuit breaker."""
+        """Call a function with circuit breaker."""
         current_state = self.state
 
         if current_state == CircuitState.OPEN:
@@ -520,7 +520,7 @@ class CircuitBreakerOpen(Exception):
     pass
 ```
 
-### Utilisation dans un Plugin
+### Usage in a Plugin
 
 ```python
 from xcore.sdk import TrustedBase, ok
@@ -531,7 +531,7 @@ import httpx
 class Plugin(TrustedBase):
 
     async def on_load(self) -> None:
-        # Circuit breaker pour l'API externe
+        # Circuit breaker for external API
         self.api_breaker = CircuitBreaker(
             name="external_api",
             failure_threshold=3,
@@ -539,7 +539,7 @@ class Plugin(TrustedBase):
         )
 
     async def call_external_api(self, endpoint: str):
-        """Appeler l'API externe avec circuit breaker."""
+        """Call external API with circuit breaker."""
         async def _call():
             async with httpx.AsyncClient() as client:
                 response = await client.get(
@@ -554,7 +554,7 @@ class Plugin(TrustedBase):
 
 ## Auto-Scaling
 
-### Métriques de Scaling
+### Scaling Metrics
 
 ```python
 # plugins/scaling_controller/main.py
@@ -577,7 +577,7 @@ class Plugin(TrustedBase):
 
         @router.get("/metrics/scaling")
         async def scaling_metrics():
-            """Métriques pour l'auto-scaling."""
+            """Metrics for auto-scaling."""
             return {
                 "timestamp": time.time(),
                 "cpu_percent": psutil.cpu_percent(interval=1),
@@ -594,7 +594,7 @@ class Plugin(TrustedBase):
 
         @router.post("/metrics/report")
         async def report_metrics():
-            """Rapporter les métriques pour agrégation."""
+            """Report metrics for aggregation."""
             import socket
 
             hostname = socket.gethostname()
@@ -605,7 +605,7 @@ class Plugin(TrustedBase):
                 "memory": psutil.virtual_memory().percent,
             }
 
-            # Stocker dans Redis pour agrégation
+            # Store in Redis for aggregation
             await self.cache.set(
                 f"{self.metrics_key}:{hostname}",
                 metrics,
@@ -617,7 +617,7 @@ class Plugin(TrustedBase):
         return router
 ```
 
-## Déploiement Kubernetes
+## Kubernetes Deployment
 
 ### Deployment
 
@@ -713,19 +713,19 @@ spec:
           averageUtilization: 80
 ```
 
-## Bonnes Pratiques
+## Best Practices
 
-1. **Stateless Design** — Ne stockez pas d'état local dans les plugins
-2. **Session Externe** — Utilisez Redis pour les sessions
-3. **Health Checks** — Implémentez des health checks complets
-4. **Graceful Shutdown** — Gérez les signaux SIGTERM proprement
-5. **Circuit Breaker** — Protégez vos appels externes
-6. **Timeouts** — Définissez toujours des timeouts
-7. **Retry Logic** — Implémentez le retry avec backoff
+1. **Stateless Design** — Do not store local state in plugins
+2. **External Session** — Use Redis for sessions
+3. **Health Checks** — Implement comprehensive health checks
+4. **Graceful Shutdown** — Handle SIGTERM signals cleanly
+5. **Circuit Breaker** — Protect your external calls
+6. **Timeouts** — Always set timeouts
+7. **Retry Logic** — Implement retry with backoff
 
 ```python
 class ResilientPlugin(TrustedBase):
-    """Plugin résilient pour production."""
+    """Resilient plugin for production."""
 
     async def on_load(self) -> None:
         self.cache = self.get_service("cache")
@@ -738,7 +738,7 @@ class ResilientPlugin(TrustedBase):
         }
 
     async def resilient_operation(self, key: str):
-        """Opération avec retry et circuit breaker."""
+        """Operation with retry and circuit breaker."""
         @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
         async def _operation():
             return await self.breakers["api"].call(
@@ -749,7 +749,7 @@ class ResilientPlugin(TrustedBase):
         try:
             return await _operation()
         except CircuitBreakerOpen:
-            # Fallback vers cache
+            # Fallback to cache
             cached = await self.cache.get(f"fallback:{key}")
             if cached:
                 return cached
@@ -758,6 +758,6 @@ class ResilientPlugin(TrustedBase):
 
 ## Next Steps
 
-- [Creating Services](./creating-services.md) — Créer des services scalables
-- [Monitoring](./monitoring.md) — Observer le cluster
-- [Deployment](../deployment/guide.md) — Déploiement en production
+- [Creating Services](./creating-services.md) — Create scalable services
+- [Monitoring](./monitoring.md) — Observe the cluster
+- [Deployment](../deployment/guide.md) — Deployment in production

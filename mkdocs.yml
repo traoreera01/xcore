@@ -66,9 +66,10 @@ nav:
       - Quick Start: getting-started/quickstart.md
   - Guides:
       - Creating Plugins: guides/creating-plugins.md
-      - Create Services: guides/creating-services.md
+      - Creating Services: guides/creating-services.md
       - Working with Services: guides/services.md
       - Event System: guides/events.md
+      - Scaling: guides/scaling.md
       - Monitoring: guides/monitoring.md
       - Security Best Practices: guides/security.md
       - Troubleshooting: guides/troubleshooting.md

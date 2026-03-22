@@ -598,4 +598,4 @@ class Plugin(TrustedBase):
 
 - [Event System](events.md)
 - [Security Best Practices](security.md)
-- [Testing Plugins](testing.md)
+- [Testing](../development/testing.md)

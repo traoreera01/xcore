@@ -1,25 +1,25 @@
-# Monitoring et Observabilité
+# Monitoring and Observability
 
-XCore fournit un système d'observabilité complet pour surveiller vos plugins et services en production.
+XCore provides a comprehensive observability system to monitor your plugins and services in production.
 
-## Vue d'ensemble
+## Overview
 
-Le système d'observabilité XCore comprend quatre piliers :
+The XCore observability system comprises four pillars:
 
-1. **Métriques** — Compteurs, gauges et histogrammes pour mesurer les performances
-2. **Health Checks** — Vérification de l'état de santé des services
-3. **Logging** — Journalisation structurée avec niveaux configurables
-4. **Tracing** — Traçage distribué pour le debugging
+1. **Metrics** — Counters, gauges, and histograms to measure performance
+2. **Health Checks** — Verification of service health
+3. **Logging** — Structured logging with configurable levels
+4. **Tracing** — Distributed tracing for debugging
 
-## Métriques
+## Metrics
 
-Le registre de métriques supporte trois types de métriques :
+The metrics registry supports three types of metrics:
 
-- **Counter** — Valeurs qui s'incrémentent (ex: nombre de requêtes)
-- **Gauge** — Valeurs qui montent ou descendent (ex: nombre de connexions)
-- **Histogram** — Distribution de valeurs (ex: latence des requêtes)
+- **Counter** — Values that increment (e.g., number of requests)
+- **Gauge** — Values that go up or down (e.g., number of connections)
+- **Histogram** — Distribution of values (e.g., request latency)
 
-### Utilisation de base
+### Basic Usage
 
 ```python
 from xcore.kernel.observability.metrics import MetricsRegistry
@@ -29,10 +29,10 @@ from xcore.sdk import TrustedBase
 class Plugin(TrustedBase):
 
     async def on_load(self) -> None:
-        # Créer un registre de métriques
+        # Create a metrics registry
         self.metrics = MetricsRegistry()
 
-        # Créer des métriques
+        # Create metrics
         self.request_count = self.metrics.counter("http.requests.total")
         self.active_connections = self.metrics.gauge("connections.active")
         self.request_latency = self.metrics.histogram("http.request.duration")
@@ -49,15 +49,15 @@ class Plugin(TrustedBase):
             self.active_connections.inc()
 
             try:
-                # Votre logique ici
+                # Your logic here
                 data = await self._fetch_data()
 
-                # Incrémenter le compteur de requêtes
+                # Increment request counter
                 self.request_count.inc()
 
                 return {"data": data}
             finally:
-                # Enregistrer la latence
+                # Record latency
                 latency = time.monotonic() - start
                 self.request_latency.observe(latency)
                 self.active_connections.dec()
@@ -65,7 +65,7 @@ class Plugin(TrustedBase):
         return router
 ```
 
-### Métriques avec labels
+### Metrics with Labels
 
 ```python
 class Plugin(TrustedBase):
@@ -73,7 +73,7 @@ class Plugin(TrustedBase):
     async def on_load(self) -> None:
         self.metrics = MetricsRegistry()
 
-        # Métriques avec labels pour une meilleure granularité
+        # Metrics with labels for better granularity
         self.request_count = self.metrics.counter(
             "http.requests.total",
             labels={"plugin": "my_plugin"}
@@ -91,7 +91,7 @@ class Plugin(TrustedBase):
         @router.get("/items/{item_id}")
         async def get_item(item_id: str, request: Request):
             try:
-                # Incrémenter avec un label dynamique
+                # Increment with dynamic label
                 self.metrics.counter(
                     "http.requests.total",
                     labels={"endpoint": "get_item", "method": "GET"}
@@ -101,7 +101,7 @@ class Plugin(TrustedBase):
                 return item
 
             except Exception as e:
-                # Compter les erreurs par type
+                # Count errors by type
                 self.metrics.counter(
                     "http.errors.total",
                     labels={"endpoint": "get_item", "error_type": type(e).__name__}
@@ -111,7 +111,7 @@ class Plugin(TrustedBase):
         return router
 ```
 
-### Exposition des métriques
+### Exposing Metrics
 
 ```python
 def get_router(self):
@@ -121,13 +121,13 @@ def get_router(self):
 
     @router.get("/metrics")
     async def get_metrics():
-        """Exposer les métriques au format JSON."""
+        """Expose metrics in JSON format."""
         return self.metrics.snapshot()
 
     return router
 ```
 
-### Exemple de sortie
+### Example Output
 
 ```json
 {
@@ -151,9 +151,9 @@ def get_router(self):
 
 ## Health Checks
 
-Le système de health checks permet de vérifier l'état de santé des composants.
+The health check system allows verifying the health status of components.
 
-### Création de checks
+### Creating Checks
 
 ```python
 from xcore.kernel.observability.health import HealthChecker, HealthStatus
@@ -166,10 +166,10 @@ class Plugin(TrustedBase):
         self.db = self.get_service("db")
         self.cache = self.get_service("cache")
 
-        # Créer le vérificateur de santé
+        # Create health checker
         self.health = HealthChecker()
 
-        # Enregistrer les vérifications
+        # Register checks
         @self.health.register("database")
         async def check_database():
             try:
@@ -207,14 +207,14 @@ class Plugin(TrustedBase):
 
         @router.get("/health")
         async def health_check():
-            """Endpoint de health check."""
+            """Health check endpoint."""
             report = await self.health.run_all(timeout=5.0)
 
             status_code = 200
             if report["status"] == "unhealthy":
                 status_code = 503
             elif report["status"] == "degraded":
-                status_code = 200  # ou 429 selon vos besoins
+                status_code = 200  # or 429 according to your needs
 
             return JSONResponse(
                 content=report,
@@ -224,7 +224,7 @@ class Plugin(TrustedBase):
         return router
 ```
 
-### Structure du rapport
+### Report Structure
 
 ```json
 {
@@ -251,7 +251,7 @@ class Plugin(TrustedBase):
 
 ## Logging
 
-XCore fournit une configuration de logging centralisée.
+XCore provides a centralized logging configuration.
 
 ### Configuration
 
@@ -260,18 +260,18 @@ XCore fournit une configuration de logging centralisée.
 logging:
   level: INFO                    # DEBUG, INFO, WARNING, ERROR, CRITICAL
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-  file: "logs/xcore.log"          # Optionnel: fichier de log
+  file: "logs/xcore.log"          # Optional: log file
   max_bytes: 10485760             # 10 MB rotation
-  backup_count: 5                 # Nombre de fichiers de backup
+  backup_count: 5                 # Number of backup files
 ```
 
-### Utilisation dans les plugins
+### Usage in Plugins
 
 ```python
 from xcore.kernel.observability.logging import get_logger
 from xcore.sdk import TrustedBase
 
-# Créer un logger pour votre plugin
+# Create a logger for your plugin
 logger = get_logger("my_plugin")
 
 
@@ -302,35 +302,35 @@ class Plugin(TrustedBase):
             return error("Internal error", code="internal_error")
 ```
 
-### Bonnes pratiques de logging
+### Best Practices for Logging
 
 ```python
-# ❌ Mauvais
+# ❌ Bad
 logger.info("User " + user_id + " logged in")
 logger.info(f"Request took {end - start} seconds")
 
-# ✅ Bon
+# ✅ Good
 logger.info("User logged in", extra={"user_id": user_id})
 logger.info("Request completed", extra={"duration_ms": (end - start) * 1000})
 
-# ❌ Mauvais
+# ❌ Bad
 try:
     risky_operation()
 except Exception as e:
-    logger.error(f"Error: {e}")  # Stack trace perdue
+    logger.error(f"Error: {e}")  # Stack trace lost
 
-# ✅ Bon
+# ✅ Good
 try:
     risky_operation()
 except Exception:
-    logger.exception("Operation failed")  # Capture la stack trace
+    logger.exception("Operation failed")  # Captures the stack trace
 ```
 
 ## Tracing
 
-Le système de tracing permet de suivre les requêtes à travers les différents composants.
+The tracing system allows tracking requests across different components.
 
-### Utilisation basique
+### Basic Usage
 
 ```python
 from xcore.kernel.observability.tracing import Tracer
@@ -346,12 +346,12 @@ class Plugin(TrustedBase):
         with self.tracer.span("handle_action", action=action) as span:
             span.set_attribute("payload_size", len(str(payload)))
 
-            # Sous-opération 1
+            # Sub-operation 1
             with self.tracer.span("validate_input") as val_span:
                 validated = await self._validate(payload)
                 val_span.set_attribute("validation_time_ms", validated.duration)
 
-            # Sous-opération 2
+            # Sub-operation 2
             with self.tracer.span("process_request") as proc_span:
                 try:
                     result = await self._process(validated)
@@ -364,7 +364,7 @@ class Plugin(TrustedBase):
             return ok(result=result)
 ```
 
-### Export des traces
+### Exporting Traces
 
 ```python
 def get_router(self):
@@ -374,13 +374,13 @@ def get_router(self):
 
     @router.get("/traces")
     async def get_traces():
-        """Exporter les traces collectées."""
+        """Export collected traces."""
         return {"spans": self.tracer.export()}
 
     return router
 ```
 
-### Exemple de trace
+### Example Trace
 
 ```json
 {
@@ -410,7 +410,7 @@ def get_router(self):
 }
 ```
 
-## Exemple complet
+## Complete Example
 
 ```python
 from xcore.kernel.observability.health import HealthChecker
@@ -426,16 +426,16 @@ logger = get_logger("api_plugin")
 class Plugin(TrustedBase):
 
     async def on_load(self) -> None:
-        # Initialisation des services
+        # Initialize services
         self.db = self.get_service("db")
         self.cache = self.get_service("cache")
 
-        # Initialisation de l'observabilité
+        # Initialize observability
         self.metrics = MetricsRegistry()
         self.health = HealthChecker()
         self.tracer = Tracer(service_name="api_plugin")
 
-        # Métriques
+        # Metrics
         self.request_count = self.metrics.counter(
             "api.requests.total",
             labels={"plugin": "api_plugin"}
@@ -470,12 +470,12 @@ class Plugin(TrustedBase):
 
         @router.get("/users/{user_id}")
         async def get_user(user_id: str, request: Request):
-            """Récupérer un utilisateur avec monitoring complet."""
+            """Fetch a user with full monitoring."""
             start_time = time.monotonic()
 
             with self.tracer.span("get_user", user_id=user_id) as span:
                 try:
-                    # Métriques
+                    # Metrics
                     self.request_count.inc()
 
                     # Cache lookup
@@ -501,10 +501,10 @@ class Plugin(TrustedBase):
 
                             db_span.set_attribute("rows_returned", 1)
 
-                    # Cache le résultat
+                    # Cache result
                     await self.cache.set(f"user:{user_id}", dict(user), ttl=300)
 
-                    # Latence
+                    # Latency
                     latency = time.monotonic() - start_time
                     self.request_latency.observe(latency)
 
@@ -525,20 +525,20 @@ class Plugin(TrustedBase):
 
         @router.get("/metrics")
         async def metrics():
-            """Métriques endpoint."""
+            """Metrics endpoint."""
             return self.metrics.snapshot()
 
         return router
 ```
 
-## Dashboard de monitoring
+## Monitoring Dashboard
 
-Voici un exemple simple de dashboard HTML pour visualiser les métriques :
+Here is a simple HTML dashboard example to visualize metrics:
 
 ```python
 @router.get("/dashboard")
 async def dashboard():
-    """Simple dashboard de monitoring."""
+    """Simple monitoring dashboard."""
     health = await self.health.run_all()
     metrics = self.metrics.snapshot()
 
@@ -565,7 +565,7 @@ async def dashboard():
         </div>
 
         <div class="card">
-            <h2>Métriques</h2>
+            <h2>Metrics</h2>
             <pre>{json.dumps(metrics, indent=2)}</pre>
         </div>
     </body>
@@ -576,7 +576,7 @@ async def dashboard():
 
 ## Alerting
 
-Exemple d'implémentation d'alertes basiques :
+Example of basic alert implementation:
 
 ```python
 import asyncio
@@ -591,10 +591,10 @@ class MonitoringAlerts:
         self.alerts = []
 
     async def check_thresholds(self):
-        """Vérifier les seuils d'alerte."""
+        """Check alert thresholds."""
         snapshot = self.metrics.snapshot()
 
-        # Alerte: erreurs HTTP élevées
+        # Alert: high HTTP errors
         error_count = snapshot["counters"].get("http.errors.total:{}", 0)
         if error_count > 100:
             await self.send_alert(
@@ -602,16 +602,16 @@ class MonitoringAlerts:
                 f"Error count is high: {error_count}"
             )
 
-        # Alerte: latence élevée
+        # Alert: high latency
         latency = snapshot["histograms"].get("http.request.duration", {})
-        if latency.get("mean", 0) > 1.0:  # > 1 seconde
+        if latency.get("mean", 0) > 1.0:  # > 1 second
             await self.send_alert(
                 "high_latency",
                 f"Mean latency is {latency['mean']:.3f}s"
             )
 
     async def send_alert(self, alert_type: str, message: str):
-        """Envoyer une alerte."""
+        """Send an alert."""
         alert = {
             "type": alert_type,
             "message": message,
@@ -619,24 +619,24 @@ class MonitoringAlerts:
         }
         self.alerts.append(alert)
 
-        # Envoyer vers Slack, PagerDuty, etc.
+        # Send to Slack, PagerDuty, etc.
         logger.error(f"ALERT [{alert_type}]: {message}")
 
     async def run_checks(self, interval: int = 60):
-        """Exécuter les vérifications périodiquement."""
+        """Run checks periodically."""
         while True:
             await self.check_thresholds()
             await asyncio.sleep(interval)
 ```
 
-## Intégration avec Prometheus
+## Prometheus Integration
 
-Pour exporter vers Prometheus, créez un endpoint compatible :
+To export to Prometheus, create a compatible endpoint:
 
 ```python
 @router.get("/prometheus")
 async def prometheus_metrics():
-    """Exporter les métriques au format Prometheus."""
+    """Export metrics in Prometheus format."""
     snapshot = self.metrics.snapshot()
 
     output = []
@@ -662,62 +662,62 @@ async def prometheus_metrics():
     return Response(content="\n".join(output), media_type="text/plain")
 ```
 
-## Bonnes pratiques
+## Best Practices
 
-1. **Métriques**
-   - Utilisez des noms descriptifs avec préfixe (ex: `http_requests_total`)
-   - Ajoutez des labels pour permettre l'agrégation
-   - Évitez les cardinalités trop élevées (millions de valeurs uniques)
+1. **Metrics**
+   - Use descriptive names with prefixes (e.g., `http_requests_total`)
+   - Add labels to allow aggregation
+   - Avoid overly high cardinalities (millions of unique values)
 
 2. **Health Checks**
-   - Gardez les checks rapides (< 5 secondes)
-   - Vérifiez les dépendances critiques uniquement
-   - Retournez des codes HTTP appropriés
+   - Keep checks fast (< 5 seconds)
+   - Verify critical dependencies only
+   - Return appropriate HTTP codes
 
 3. **Logging**
-   - Utilisez le bon niveau de log (DEBUG pour le dev, INFO/ERROR pour la prod)
-   - Structurez vos logs avec des champs extra
-   - Évitez de logger des données sensibles
+   - Use the right log level (DEBUG for dev, INFO/ERROR for prod)
+   - Structure your logs with extra fields
+   - Avoid logging sensitive data
 
 4. **Tracing**
-   - Créez des spans pour les opérations lentes (> 10ms)
-   - Ajoutez des attributs pertinents pour le debugging
-   - Propaguez les trace_id entre les services
+   - Create spans for slow operations (> 10ms)
+   - Add relevant attributes for debugging
+   - Propagate trace_ids between services
 
-## Monitoring avec EventBus
+## Monitoring with EventBus
 
-Le EventBus permet de monitorer les événements système en temps réel.
+The EventBus allows monitoring system events in real-time.
 
-### S'abonner aux événements système
+### Subscribing to System Events
 
 ```python
 from xcore.sdk import TrustedBase
 
 
 class MonitoringPlugin(TrustedBase):
-    """Plugin de monitoring via EventBus."""
+    """Monitoring plugin via EventBus."""
 
     async def on_load(self) -> None:
         self.events = self.ctx.events
         self.metrics = MetricsRegistry()
 
-        # Créer les métriques
+        # Create metrics
         self.event_counter = self.metrics.counter("events.total")
         self.event_latency = self.metrics.histogram("event.processing.duration")
 
-        # S'abonner aux événements système
+        # Subscribe to system events
         self.events.on("plugin.*.loaded", self._on_plugin_loaded)
         self.events.on("plugin.*.error", self._on_plugin_error)
         self.events.on("service.*.error", self._on_service_error)
 
-        # Monitoring des performances
+        # Performance monitoring
         self.events.on("request.start", self._on_request_start, priority=100)
         self.events.on("request.end", self._on_request_end, priority=10)
 
         self._request_timings = {}
 
     async def _on_plugin_loaded(self, event):
-        """Logger le chargement des plugins."""
+        """Log plugin loading."""
         logger.info(
             f"Plugin {event.name} loaded",
             extra={"source": event.source, "data": event.data}
@@ -725,7 +725,7 @@ class MonitoringPlugin(TrustedBase):
         self.event_counter.inc()
 
     async def _on_plugin_error(self, event):
-        """Logger les erreurs de plugin."""
+        """Log plugin errors."""
         logger.error(
             f"Plugin error: {event.data.get('error')}",
             extra={
@@ -735,7 +735,7 @@ class MonitoringPlugin(TrustedBase):
             }
         )
 
-        # Émettre une alerte
+        # Emit an alert
         await self.events.emit("alert.critical", {
             "type": "plugin_error",
             "message": event.data.get("error"),
@@ -743,19 +743,19 @@ class MonitoringPlugin(TrustedBase):
         })
 
     async def _on_service_error(self, event):
-        """Logger les erreurs de service."""
+        """Log service errors."""
         logger.error(
             f"Service {event.data.get('service')} error",
             extra={"error": event.data.get("error")}
         )
 
     async def _on_request_start(self, event):
-        """Démarrer le timing d'une requête."""
+        """Start request timing."""
         request_id = event.data.get("request_id")
         self._request_timings[request_id] = time.monotonic()
 
     async def _on_request_end(self, event):
-        """Terminer le timing et enregistrer les métriques."""
+        """Finish timing and record metrics."""
         request_id = event.data.get("request_id")
         start_time = self._request_timings.pop(request_id, None)
 
@@ -763,8 +763,8 @@ class MonitoringPlugin(TrustedBase):
             duration = time.monotonic() - start_time
             self.event_latency.observe(duration)
 
-            # Alerte si latence trop élevée
-            if duration > 1.0:  # > 1 seconde
+            # Alert if latency is too high
+            if duration > 1.0:  # > 1 second
                 await self.events.emit("alert.warning", {
                     "type": "high_latency",
                     "duration": duration,
@@ -772,17 +772,17 @@ class MonitoringPlugin(TrustedBase):
                 })
 
     async def on_unload(self) -> None:
-        """Nettoyer les souscriptions."""
+        """Clean up subscriptions."""
         self.events.unsubscribe("plugin.*.loaded", self._on_plugin_loaded)
         self.events.unsubscribe("plugin.*.error", self._on_plugin_error)
         self.events.unsubscribe("service.*.error", self._on_service_error)
 ```
 
-### Émettre des événements de monitoring
+### Emitting Monitoring Events
 
 ```python
 class MonitoredPlugin(TrustedBase):
-    """Plugin qui émet des événements de monitoring."""
+    """Plugin that emits monitoring events."""
 
     def get_router(self):
         from fastapi import APIRouter, Request
@@ -794,7 +794,7 @@ class MonitoredPlugin(TrustedBase):
         async def get_item(item_id: str, request: Request):
             request_id = str(uuid.uuid4())
 
-            # Émettre début de requête
+            # Emit request start
             await self.ctx.events.emit("request.start", {
                 "request_id": request_id,
                 "method": "GET",
@@ -805,7 +805,7 @@ class MonitoredPlugin(TrustedBase):
             try:
                 item = await self._fetch_item(item_id)
 
-                # Émettre fin de requête
+                # Emit request end
                 await self.ctx.events.emit("request.end", {
                     "request_id": request_id,
                     "status": "success",
@@ -815,7 +815,7 @@ class MonitoredPlugin(TrustedBase):
                 return {"item": item}
 
             except Exception as e:
-                # Émettre erreur
+                # Emit error
                 await self.ctx.events.emit("request.end", {
                     "request_id": request_id,
                     "status": "error",
@@ -826,11 +826,11 @@ class MonitoredPlugin(TrustedBase):
         return router
 ```
 
-## Monitoring avec HookManager
+## Monitoring with HookManager
 
-Le HookManager permet de créer des points de monitoring dans le flux d'exécution.
+The HookManager allows creating monitoring points in the execution flow.
 
-### Hooks de monitoring
+### Monitoring Hooks
 
 ```python
 from xcore.kernel.events.hooks import HookManager
@@ -838,16 +838,16 @@ from xcore.sdk import TrustedBase
 
 
 class HookMonitoringPlugin(TrustedBase):
-    """Plugin de monitoring via HookManager."""
+    """Monitoring plugin via HookManager."""
 
     async def on_load(self) -> None:
         self.hooks = HookManager()
         self.metrics = MetricsRegistry()
 
-        # Enregistrer des hooks de monitoring
+        # Register monitoring hooks
         @self.hooks.on("api.request", priority=100)
         async def track_request(event):
-            """Suivre les requêtes API."""
+            """Track API requests."""
             self.metrics.counter("api.requests", labels={
                 "method": event.data.get("method"),
                 "endpoint": event.data.get("endpoint")
@@ -855,19 +855,19 @@ class HookMonitoringPlugin(TrustedBase):
 
         @self.hooks.on("db.query", priority=50)
         async def track_db_query(event):
-            """Suivre les requêtes DB."""
+            """Track DB queries."""
             start = time.monotonic()
 
-            # Le hook s'exécute avant la requête
-            # On peut ajouter un callback pour après
+            # The hook runs before the query
+            # We can add a callback for after
             event.data["_start_time"] = start
 
-            # Retourner un callback qui sera exécuté après
+            # Return a callback to be executed after
             return {"start_time": start}
 
         @self.hooks.on("db.query.complete", priority=50)
         async def track_db_complete(event):
-            """Suivre la complétion des requêtes DB."""
+            """Track DB query completion."""
             start_time = event.data.get("start_time")
             if start_time:
                 duration = time.monotonic() - start_time
@@ -875,16 +875,16 @@ class HookMonitoringPlugin(TrustedBase):
 
         @self.hooks.on("cache.miss", priority=10)
         async def track_cache_miss(event):
-            """Suivre les cache misses."""
+            """Track cache misses."""
             self.metrics.counter("cache.miss", labels={
                 "key": event.data.get("key")
             }).inc()
 
     async def emit_monitored_event(self, event_name: str, data: dict):
-        """Émettre un événement avec monitoring."""
+        """Emit an event with monitoring."""
         results = await self.hooks.emit(event_name, data)
 
-        # Analyser les résultats des hooks
+        # Analyze hook results
         for result in results:
             if result.error:
                 logger.error(f"Hook {result.hook_name} failed: {result.error}")
@@ -892,57 +892,57 @@ class HookMonitoringPlugin(TrustedBase):
         return results
 ```
 
-### Intercepteurs de monitoring
+### Monitoring Interceptors
 
 ```python
 class InterceptorMonitoringPlugin(TrustedBase):
-    """Monitoring avec intercepteurs."""
+    """Monitoring with interceptors."""
 
     async def on_load(self) -> None:
         self.hooks = HookManager()
         self.metrics = MetricsRegistry()
 
-        # Intercepteur pré-exécution
+        # Pre-execution interceptor
         async def pre_interceptor(event):
-            """Exécuté avant les hooks."""
+            """Executed before hooks."""
             event.data["_monitor_start"] = time.monotonic()
             return InterceptorResult.CONTINUE
 
-        # Intercepteur post-exécution
+        # Post-execution interceptor
         async def post_interceptor(event, results):
-            """Exécuté après les hooks."""
+            """Executed after hooks."""
             start = event.data.get("_monitor_start")
             if start:
                 duration = time.monotonic() - start
 
-                # Enregistrer les métriques
+                # Record metrics
                 self.metrics.histogram("hook.execution.duration").observe(duration)
 
-                # Alerte si trop lent
+                # Alert if too slow
                 if duration > 0.1:  # > 100ms
                     logger.warning(
                         f"Slow hook execution: {duration:.3f}s",
                         extra={"event": event.name}
                     )
 
-        # Enregistrer les intercepteurs
+        # Register interceptors
         self.hooks.register_pre_interceptor("api.*", pre_interceptor)
         self.hooks.register_post_interceptor("api.*", post_interceptor)
 ```
 
-### Pattern: Wildcards pour monitoring global
+### Pattern: Wildcards for Global Monitoring
 
 ```python
 class GlobalMonitoringPlugin(TrustedBase):
-    """Monitoring global avec wildcards."""
+    """Global monitoring with wildcards."""
 
     async def on_load(self) -> None:
         self.hooks = HookManager()
 
-        # Intercepter tous les événements
-        @self.hooks.on("*", priority=1)  # Basse priorité = s'exécute en dernier
+        # Intercept all events
+        @self.hooks.on("*", priority=1)  # Low priority = runs last
         async def global_monitor(event):
-            """Monitorer tous les événements."""
+            """Monitor all events."""
             logger.debug(
                 f"Event: {event.name}",
                 extra={
@@ -952,10 +952,10 @@ class GlobalMonitoringPlugin(TrustedBase):
                 }
             )
 
-        # Monitorer les erreurs uniquement
+        # Monitor errors only
         @self.hooks.on("*.error", priority=100)
         async def error_monitor(event):
-            """Monitorer toutes les erreurs."""
+            """Monitor all errors."""
             logger.error(
                 f"Error event: {event.name}",
                 extra={
@@ -964,72 +964,72 @@ class GlobalMonitoringPlugin(TrustedBase):
                 }
             )
 
-            # Envoyer alerte si erreur critique
+            # Send alert if critical error
             if event.data.get("critical"):
                 await self._send_alert(event)
 ```
 
-## Intégration EventBus + HookManager
+## EventBus + HookManager Integration
 
-Utilisez les deux systèmes ensemble pour un monitoring complet :
+Use both systems together for complete monitoring:
 
 ```python
 class CompleteMonitoringPlugin(TrustedBase):
-    """Plugin de monitoring complet."""
+    """Complete monitoring plugin."""
 
     async def on_load(self) -> None:
         self.events = self.ctx.events
         self.hooks = HookManager()
         self.metrics = MetricsRegistry()
 
-        # EventBus pour la communication inter-plugin
+        # EventBus for inter-plugin communication
         self.events.on("monitoring.metrics.request", self._on_metrics_request)
         self.events.on("monitoring.health.request", self._on_health_request)
 
-        # HookManager pour le monitoring interne
+        # HookManager for internal monitoring
         @self.hooks.on("plugin.action")
         async def monitor_plugin_action(event):
             start = time.monotonic()
 
-            # Publier via EventBus
+            # Publish via EventBus
             await self.events.emit("action.started", {
                 "plugin": event.data.get("plugin"),
                 "action": event.data.get("action")
             })
 
-            # Attendre la fin (via callback ou autre mécanisme)
+            # Wait for completion (via callback or other mechanism)
             return {"start_time": start}
 
     async def _on_metrics_request(self, event):
-        """Répondre aux demandes de métriques."""
+        """Respond to metrics requests."""
         await self.events.emit("monitoring.metrics.response", {
             "request_id": event.data.get("request_id"),
             "metrics": self.metrics.snapshot()
         })
 
     async def _on_health_request(self, event):
-        """Répondre aux demandes de health check."""
+        """Respond to health check requests."""
         await self.events.emit("monitoring.health.response", {
             "request_id": event.data.get("request_id"),
             "status": await self._check_health()
         })
 ```
 
-## Dashboard de monitoring en temps réel
+## Real-time Monitoring Dashboard
 
 ```python
 class MonitoringDashboardPlugin(TrustedBase):
-    """Dashboard avec SSE pour temps réel."""
+    """Dashboard with SSE for real-time."""
 
     async def on_load(self) -> None:
         self.events = self.ctx.events
         self.subscribers = []
 
-        # S'abonner aux événements système
+        # Subscribe to system events
         self.events.on("*", self._broadcast_event)
 
     async def _broadcast_event(self, event):
-        """Diffuser les événements aux subscribers."""
+        """Broadcast events to subscribers."""
         message = json.dumps({
             "event": event.name,
             "data": event.data,
@@ -1048,7 +1048,7 @@ class MonitoringDashboardPlugin(TrustedBase):
 
         @router.get("/events/stream")
         async def event_stream():
-            """Stream d'événements SSE."""
+            """SSE event stream."""
             queue = asyncio.Queue()
             self.subscribers.append(queue)
 
@@ -1070,7 +1070,7 @@ class MonitoringDashboardPlugin(TrustedBase):
 
 ## Next Steps
 
-- [Services](./services.md) — Utiliser les services de cache et base de données
-- [Security](./security.md) — Sécuriser vos endpoints de monitoring
-- [Events](./events.md) — Système d'événements complet
-- [Deployment](../deployment/guide.md) — Déployer avec monitoring en production
+- [Services](./services.md) — Use cache and database services
+- [Security](./security.md) — Secure your monitoring endpoints
+- [Events](./events.md) — Complete event system
+- [Deployment](../deployment/guide.md) — Deploy with monitoring in production
