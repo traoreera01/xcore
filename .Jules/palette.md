@@ -5,3 +5,7 @@
 ## 2025-05-15 - [Structured CLI Data with Rich Tables]
 **Learning:** For command outputs involving multiple entity attributes (like name, version, status), using structured tables with clear headers and semantic colors (e.g., green for OK, red for error) drastically reduces cognitive load compared to manual padding.
 **Action:** Prefer `rich.table.Table` over custom string formatting for any CLI output that lists more than two related properties.
+
+## 2025-05-20 - [Rich Console.print Error Handling]
+**Learning:** `rich.console.Console.print` does not support the `file` keyword argument (unlike standard `print`). Using `file=sys.stderr` inside `console.print` will raise a `TypeError`.
+**Action:** To print to stderr with `rich`, initialize a dedicated console instance with `Console(stderr=True)` or simply use `console.print` as it handles stdout by default and is intended to be the unified output manager.
