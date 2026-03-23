@@ -76,12 +76,21 @@ class FilesystemGuard:
         denied_paths: list[str],
     ) -> None:
         self._plugin_dir = plugin_dir.resolve()
-        self._allowed = [
-            (self._plugin_dir / p).resolve() for p in (allowed_paths or ["data/"])
-        ]
-        self._denied = [
-            (self._plugin_dir / p).resolve() for p in (denied_paths or ["src/"])
-        ]
+
+        self._allowed = []
+        for p in (allowed_paths or ["data/"]):
+            target = (self._plugin_dir / p).resolve()
+            if not target.is_relative_to(self._plugin_dir):
+                raise PermissionError(f"Sandbox escape detected in allowed_paths: {p}")
+            self._allowed.append(target)
+
+        self._denied = []
+        for p in (denied_paths or ["src/"]):
+            target = (self._plugin_dir / p).resolve()
+            if not target.is_relative_to(self._plugin_dir):
+                raise PermissionError(f"Sandbox escape detected in denied_paths: {p}")
+            self._denied.append(target)
+
         self._original_open = builtins_open  # sauvegarde avant patch
 
     def _resolve(self, path_arg) -> Path:

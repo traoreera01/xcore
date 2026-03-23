@@ -346,8 +346,10 @@ class _ImportVisitor(ast.NodeVisitor):
             self._check(node.module, node.lineno)
 
     def visit_Call(self, node: ast.Call) -> None:
-        if isinstance(node.func, ast.Name) and node.func.id == "__import__":
-            self.errors.append(
-                f"{self.filename}:{node.lineno}: __import__() dynamique interdit"
-            )
+        if isinstance(node.func, ast.Name):
+            func_id = node.func.id
+            if func_id in ("eval", "exec", "compile", "__import__"):
+                self.errors.append(
+                    f"{self.filename}:{node.lineno}: {func_id}() interdit dans le sandbox"
+                )
         self.generic_visit(node)
