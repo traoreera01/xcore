@@ -7,3 +7,8 @@
 **Vulnerability:** The `ManifestValidator._inject_dotenv` method allowed loading `.env` files from outside the plugin directory via the `env_file` manifest parameter.
 **Learning:** Even when using `Path` objects, concatenating a base directory with a user-provided relative path containing `..` can escape the intended directory if not explicitly validated after resolution.
 **Prevention:** Always use `.resolve()` on the final path and verify it stays within the intended base directory using `.is_relative_to(base_dir.resolve())`.
+
+## 2026-03-23 - Sandbox Escape in FilesystemGuard Configuration
+**Vulnerability:** The `FilesystemGuard` in `worker.py` did not validate that `allowed_paths` and `denied_paths` from the plugin manifest remained within the plugin directory.
+**Learning:** Security guards themselves must be guarded against malicious configurations. If a sandbox policy allows absolute paths (e.g., `/etc`) or traversal paths (e.g., `../../`), the entire isolation is compromised.
+**Prevention:** Validate sandbox configuration paths during initialization using `is_relative_to(plugin_dir)`. Also, enhance static analysis (AST scanning) to block dynamic execution functions (`eval`, `exec`, `compile`) early in the lifecycle.
