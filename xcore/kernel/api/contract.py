@@ -90,16 +90,18 @@ class TrustedBase(ABC):
     # de `name`. Le fallback (str → Any) couvre les clés dynamiques.
 
     @overload
-    def get_service(self, name: "Literal['db']") -> "AsyncSQLAdapter": ...        # noqa: F811
+    def get_service(self, name: "Literal['db']") -> "AsyncSQLAdapter": ...  # noqa: F811
 
     @overload
-    def get_service(self, name: "Literal['cache']") -> "CacheService": ...        # noqa: F811
+    def get_service(self, name: "Literal['cache']") -> "CacheService": ...  # noqa: F811
 
     @overload
-    def get_service(self, name: "Literal['scheduler']") -> "SchedulerService": ...# noqa: F811
+    def get_service(
+        self, name: "Literal['scheduler']"
+    ) -> "SchedulerService": ...  # noqa: F811
 
     @overload
-    def get_service(self, name: str) -> Any: ...                                   # noqa: F811
+    def get_service(self, name: str) -> Any: ...  # noqa: F811
 
     def get_service(self, name: str) -> Any:
         """

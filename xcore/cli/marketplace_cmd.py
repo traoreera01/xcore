@@ -145,11 +145,16 @@ async def _mkt_show(args) -> None:
             plugin = await client.get_plugin(name)
             versions = await client.get_versions(name)
         except Exception as e:
-            console.print(f"[bold red]❌ Erreur marketplace :[/] {escape(str(e))}", file=sys.stderr)
+            console.print(
+                f"[bold red]❌ Erreur marketplace :[/] {escape(str(e))}",
+                file=sys.stderr,
+            )
             sys.exit(1)
 
     if not plugin:
-        console.print(f"[bold red]❌ Plugin '{escape(name)}' introuvable.[/]", file=sys.stderr)
+        console.print(
+            f"[bold red]❌ Plugin '{escape(name)}' introuvable.[/]", file=sys.stderr
+        )
         sys.exit(1)
 
     info = [
@@ -162,7 +167,9 @@ async def _mkt_show(args) -> None:
         f"[bold cyan]Dépôt       :[/][blue] {escape(str(plugin.get('repository', '?')))}[/]",
     ]
     if plugin.get("requires"):
-        info.append(f"[bold cyan]Dépendances :[/] {escape(', '.join(plugin['requires']))}")
+        info.append(
+            f"[bold cyan]Dépendances :[/] {escape(', '.join(plugin['requires']))}"
+        )
 
     content = "\n".join(info)
     if versions:
