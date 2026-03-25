@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 from rich.console import Console
+from rich.prompt import Confirm
 from rich.table import Table
 
 console = Console()
@@ -83,7 +84,12 @@ async def _plugin_list(args) -> None:
             except Exception:
                 table.add_row(p, "[red]?[/]", "[red]?[/]", "[red]Erreur de lecture[/]")
         else:
-            table.add_row(p, "[grey70]?[/]", "[grey70]?[/]", "[italic grey70]Manifeste manquant[/]")
+            table.add_row(
+                p,
+                "[grey70]?[/]",
+                "[grey70]?[/]",
+                "[italic grey70]Manifeste manquant[/]",
+            )
 
     console.print(table)
 
@@ -134,7 +140,14 @@ async def _plugin_health(args) -> None:
             table.add_row(name, mode, signed, ast_ok, "✅", "[green]OK[/]")
 
         except Exception as e:
-            table.add_row(name, "[red]?[/]", "[red]?[/]", "[red]?[/]", "❌", f"[red]Erreur: {e}[/]")
+            table.add_row(
+                name,
+                "[red]?[/]",
+                "[red]?[/]",
+                "[red]?[/]",
+                "❌",
+                f"[red]Erreur: {e}[/]",
+            )
 
     console.print(table)
 
@@ -159,26 +172,29 @@ async def _plugin_install(args) -> None:
         )
         sys.exit(1)
 
-    if source == "git" or (url and url.endswith(".git")):
-        await _install_from_git(name, url or name, dest)
+    with console.status(f"[bold green]📦 Installation de [cyan]{name}[/]..."):
+        if source == "git" or (url and url.endswith(".git")):
+            await _install_from_git(name, url or name, dest)
 
-    elif source == "zip" or (url and (url.endswith(".zip") or url.startswith("http"))):
-        if not url:
-            print(f"❌  --url requis pour --source zip")
-            sys.exit(1)
-        await _install_from_zip(name, url, dest)
+        elif source == "zip" or (
+            url and (url.endswith(".zip") or url.startswith("http"))
+        ):
+            if not url:
+                console.print(f"[bold red]❌  --url requis pour --source zip[/]")
+                sys.exit(1)
+            await _install_from_zip(name, url, dest)
 
-    else:
-        # marketplace
-        from xcore.marketplace import MarketplaceClient
+        else:
+            # marketplace
+            from xcore.marketplace import MarketplaceClient
 
-        client = MarketplaceClient(cfg)
-        await _install_from_marketplace(client, name, dest, cfg)
+            client = MarketplaceClient(cfg)
+            await _install_from_marketplace(client, name, dest, cfg)
 
-    # ── Signature automatique post-install ────────────────────
-    await _auto_sign(dest, cfg)
+        # ── Signature automatique post-install ────────────────────
+        await _auto_sign(dest, cfg)
 
-    print(f"✅  Plugin '{name}' installé dans {dest}")
+    console.print(f"✅  Plugin [bold]'{name}'[/] installé dans [italic]{dest}[/]")
 
 
 async def _install_from_git(name: str, url: str, dest: Path) -> None:
@@ -310,13 +326,12 @@ async def _plugin_remove(args) -> None:
         print(f"❌  Plugin '{name}' introuvable dans {plugin_dir}")
         sys.exit(1)
 
-    confirm = input(f"⚠️   Supprimer '{name}' ? [y/N] ").strip().lower()
-    if confirm != "y":
-        print("Annulé.")
+    if not Confirm.ask(f"⚠️   Supprimer [bold red]'{name}'[/] ?", default=False):
+        console.print("[yellow]Annulé.[/]")
         return
 
     shutil.rmtree(plugin_dir)
-    print(f"✅  Plugin '{name}' supprimé.")
+    console.print(f"✅  Plugin [bold]'{name}'[/] supprimé.")
 
 
 # ── info ──────────────────────────────────────────────────────
