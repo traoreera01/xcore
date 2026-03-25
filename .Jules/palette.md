@@ -5,3 +5,7 @@
 ## 2025-05-15 - [Structured CLI Data with Rich Tables]
 **Learning:** For command outputs involving multiple entity attributes (like name, version, status), using structured tables with clear headers and semantic colors (e.g., green for OK, red for error) drastically reduces cognitive load compared to manual padding.
 **Action:** Prefer `rich.table.Table` over custom string formatting for any CLI output that lists more than two related properties.
+
+## 2026-03-25 - [Interactive CLI Enhancements with Rich]
+**Learning:** Standardizing interactive prompts using `rich.prompt.Confirm` and providing visual feedback during long-running tasks with `rich.console.Status` significantly improves the perceived quality and user confidence in CLI tools.
+**Action:** Always replace basic `input()` with `Confirm.ask()` for destructive actions and wrap network-bound calls in `console.status()` blocks.
