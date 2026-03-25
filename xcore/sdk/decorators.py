@@ -250,20 +250,22 @@ class AutoDispatchMixin:
     async def handle(self, action_name: str, payload: dict) -> dict:
         from ..kernel.api.contract import error
 
-        for attr_name in dir(self):
-            method = getattr(self, attr_name, None)
-            if (
-                callable(method)
-                and getattr(method, "_xcore_action", None) == action_name
-            ):
-                return await method(payload)
+        # Bolt Optimization: Cache action methods to avoid O(N) dir() and getattr() scans
+        if not hasattr(self, "_xcore_action_cache"):
+            cache = {}
+            for attr_name in dir(self):
+                method = getattr(self, attr_name, None)
+                if callable(method):
+                    name = getattr(method, "_xcore_action", None)
+                    if name:
+                        cache[name] = method
+            self._xcore_action_cache = cache
 
-        available = [
-            getattr(getattr(self, a), "_xcore_action")
-            for a in dir(self)
-            if callable(getattr(self, a, None))
-            and hasattr(getattr(self, a), "_xcore_action")
-        ]
+        method = self._xcore_action_cache.get(action_name)
+        if method:
+            return await method(payload)
+
+        available = list(self._xcore_action_cache.keys())
         return error(
             f"Action '{action_name}' inconnue. Disponibles : {available}",
             "unknown_action",
