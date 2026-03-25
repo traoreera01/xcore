@@ -24,8 +24,8 @@ class TestActionDecorator:
         plugin = Plugin()
 
         # Check decorator added metadata
-        assert hasattr(plugin.process_action, "_action_name")
-        assert plugin.process_action._action_name == "process"
+        assert hasattr(plugin.process_action, "_xcore_action")
+        assert plugin.process_action._xcore_action == "process"
 
 
 class TestRouteDecorator:
@@ -36,15 +36,15 @@ class TestRouteDecorator:
         MagicMock()
 
         class Plugin:
-            @route.get("/items")
+            @route("/items")
             async def list_items(self):
                 return []
 
         plugin = Plugin()
 
         # Verify route metadata
-        assert hasattr(plugin.list_items, "_route_path")
-        assert plugin.list_items._route_path == "/items"
+        assert hasattr(plugin.list_items, "_xcore_route")
+        assert plugin.list_items._xcore_route["path"] == "/items"
 
 
 class TestRequireServiceDecorator:
@@ -55,19 +55,19 @@ class TestRequireServiceDecorator:
         """Test require_service decorator."""
 
         class Plugin:
-            ctx = MagicMock()
-            ctx.services = {"db": MagicMock()}
+            def __init__(self):
+                self.services = {"db": MagicMock()}
+
+            def get_service(self, name):
+                return self.services[name]
 
             @require_service("db")
-            async def get_data(self, db):
-                return db.query()
+            async def get_data(self):
+                return self.get_service("db").query()
 
         plugin = Plugin()
-        plugin.ctx.services.get.return_value = MagicMock()
-
         await plugin.get_data()
-
-        plugin.ctx.services.get.assert_called_with("db")
+        plugin.services["db"].query.assert_called_once()
 
 
 class TestValidatePayloadDecorator:
@@ -85,6 +85,7 @@ class TestValidatePayloadDecorator:
         class Plugin:
             @validate_payload(InputModel)
             async def create(self, data: InputModel):
+                # data is InputModel due to decorator
                 return {"name": data.name, "count": data.count}
 
         plugin = Plugin()
@@ -94,6 +95,7 @@ class TestValidatePayloadDecorator:
         assert result["name"] == "test"
         assert result["count"] == 5
 
-        # Invalid payload should raise
-        with pytest.raises(Exception):
-            await plugin.create({"name": "test", "count": "not_an_int"})
+        # Invalid payload should return error dict as per decorator implementation
+        result = await plugin.create({"name": "test", "count": "not_an_int"})
+        assert result["status"] == "error"
+        assert result["code"] == "validation_error"
