@@ -12,6 +12,11 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from rich.console import Console
+from rich.prompt import Confirm
+
+console = Console()
+
 
 def _load_config(args):
     from xcore.configurations.loader import ConfigLoader
@@ -271,13 +276,11 @@ async def _sandbox_fs(args) -> None:
     # Vérifie si le dossier data/ existe, le créer si nécessaire
     data_dir = plugin_dir / "data"
     if not data_dir.exists():
-        create = (
-            input(f"\n  ⚠️   Le dossier data/ n'existe pas. Créer ? [y/N] ")
-            .strip()
-            .lower()
-        )
-        if create == "y":
+        if Confirm.ask(
+            f"\n[bold yellow]  ⚠️   Le dossier data/ n'existe pas. Créer ?[/]",
+            default=False,
+        ):
             data_dir.mkdir(parents=True)
-            print(f"  ✅  {data_dir} créé.")
+            console.print(f"  [bold green]✅  {data_dir} créé.[/]")
 
     print(f"{'='*45}\n")

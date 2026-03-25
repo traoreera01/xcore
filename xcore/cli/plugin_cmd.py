@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 from rich.console import Console
+from rich.prompt import Confirm
 from rich.table import Table
 
 console = Console()
@@ -307,16 +308,15 @@ async def _plugin_remove(args) -> None:
     plugin_dir = Path(cfg.plugins.directory) / name
 
     if not plugin_dir.exists():
-        print(f"❌  Plugin '{name}' introuvable dans {plugin_dir}")
+        console.print(f"[bold red]❌  Plugin '{name}' introuvable dans[/] {plugin_dir}")
         sys.exit(1)
 
-    confirm = input(f"⚠️   Supprimer '{name}' ? [y/N] ").strip().lower()
-    if confirm != "y":
-        print("Annulé.")
+    if not Confirm.ask(f"[bold yellow]⚠️   Supprimer '{name}' ?[/]", default=False):
+        console.print("[dim]Annulé.[/]")
         return
 
     shutil.rmtree(plugin_dir)
-    print(f"✅  Plugin '{name}' supprimé.")
+    console.print(f"[bold green]✅  Plugin '{name}' supprimé.[/]")
 
 
 # ── info ──────────────────────────────────────────────────────
