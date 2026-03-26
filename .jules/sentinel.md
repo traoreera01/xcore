@@ -7,3 +7,8 @@
 **Vulnerability:** The `ManifestValidator._inject_dotenv` method allowed loading `.env` files from outside the plugin directory via the `env_file` manifest parameter.
 **Learning:** Even when using `Path` objects, concatenating a base directory with a user-provided relative path containing `..` can escape the intended directory if not explicitly validated after resolution.
 **Prevention:** Always use `.resolve()` on the final path and verify it stays within the intended base directory using `.is_relative_to(base_dir.resolve())`.
+
+## 2026-03-26 - Bypass of Static Security Scan via Built-in Functions
+**Vulnerability:** The `ASTScanner` only checked for forbidden items during import operations (`import os`, `from os import ...`). Dangerous built-in functions like `eval()`, `exec()`, and `compile()` were included in the forbidden list but could still be called directly because the AST visitor did not inspect function call nodes.
+**Learning:** Static analysis of module imports is insufficient to block built-in functions that are always available in the global namespace. A security-focused AST visitor must explicitly inspect `ast.Call` nodes.
+**Prevention:** In the AST visitor, override `visit_Call` to check the function identifier against the forbidden list, ensuring that built-ins are blocked even when not explicitly imported.
