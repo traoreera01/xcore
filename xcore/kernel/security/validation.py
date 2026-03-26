@@ -346,8 +346,13 @@ class _ImportVisitor(ast.NodeVisitor):
             self._check(node.module, node.lineno)
 
     def visit_Call(self, node: ast.Call) -> None:
-        if isinstance(node.func, ast.Name) and node.func.id == "__import__":
-            self.errors.append(
-                f"{self.filename}:{node.lineno}: __import__() dynamique interdit"
-            )
+        if isinstance(node.func, ast.Name):
+            if node.func.id == "__import__":
+                self.errors.append(
+                    f"{self.path}:{node.lineno}: __import__() dynamique interdit"
+                )
+            elif node.func.id in self.forbidden:
+                self.errors.append(
+                    f"{self.path}:{node.lineno}: appel interdit : {node.func.id}()"
+                )
         self.generic_visit(node)
