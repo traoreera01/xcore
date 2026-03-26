@@ -659,4 +659,4 @@ Exemple de sortie `xcore sandbox limits` :
 - [Working with Services](services.md)
 - [Event System](events.md)
 - [Security Best Practices](security.md)
-- [Testing Plugins](testing.md)
+- [Testing](../development/testing.md)

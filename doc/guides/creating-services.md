@@ -1,28 +1,28 @@
-# Création de Services
+# Creating Services
 
-XCore permet de créer des services réutilisables qui peuvent être partagés entre plugins via le conteneur de services.
+XCore allows creating reusable services that can be shared among plugins via the service container.
 
-## Vue d'ensemble
+## Overview
 
-Un service dans XCore est un composant qui :
-- Implémente un cycle de vie (`init()`, `shutdown()`, `health_check()`, `status()`)
-- Peut être utilisé par plusieurs plugins
-- Est géré par le `ServiceContainer`
+A service in XCore is a component that:
+- Implements a lifecycle (`init()`, `shutdown()`, `health_check()`, `status()`)
+- Can be used by multiple plugins
+- Is managed by the `ServiceContainer`
 
-Il existe deux types de services :
-1. **Services intégrés** — Base de données, cache, scheduler
-2. **Extensions** — Services personnalisés que vous créez
+There are two types of services:
+1. **Built-in Services** — Database, cache, scheduler
+2. **Extensions** — Custom services that you create
 
 ## BaseService
 
-Tous les services doivent hériter de `BaseService` :
+All services must inherit from `BaseService`:
 
 ```python
 from xcore.services.base import BaseService, ServiceStatus
 
 
 class MyService(BaseService):
-    """Service personnalisé."""
+    """Custom service."""
 
     name = "my_service"
 
@@ -32,22 +32,22 @@ class MyService(BaseService):
         self._client = None
 
     async def init(self) -> None:
-        """Initialiser le service."""
+        """Initialize the service."""
         self._status = ServiceStatus.INITIALIZING
 
-        # Connexion, warmup, etc.
+        # Connection, warmup, etc.
         self._client = await self._connect()
 
         self._status = ServiceStatus.READY
 
     async def shutdown(self) -> None:
-        """Arrêter proprement le service."""
+        """Cleanly stop the service."""
         if self._client:
             await self._client.close()
         self._status = ServiceStatus.STOPPED
 
     async def health_check(self) -> tuple[bool, str]:
-        """Vérifier la santé du service."""
+        """Check the health of the service."""
         try:
             await self._client.ping()
             return True, "OK"
@@ -55,7 +55,7 @@ class MyService(BaseService):
             return False, str(e)
 
     def status(self) -> dict:
-        """État actuel du service."""
+        """Current status of the service."""
         return {
             "name": self.name,
             "status": self._status.value,
@@ -63,11 +63,11 @@ class MyService(BaseService):
         }
 ```
 
-## Créer une Extension
+## Creating an Extension
 
-Les extensions sont des services personnalisés enregistrés dans la configuration.
+Extensions are custom services registered in the configuration.
 
-### 1. Créer le Service
+### 1. Create the Service
 
 ```python
 # myapp/services/email.py
@@ -77,7 +77,7 @@ from email.message import EmailMessage
 
 
 class EmailService(BaseService):
-    """Service d'envoi d'emails."""
+    """Email sending service."""
 
     name = "email"
 
@@ -92,7 +92,7 @@ class EmailService(BaseService):
         self._sent_count = 0
 
     async def init(self) -> None:
-        """Initialiser la connexion SMTP."""
+        """Initialize SMTP connection."""
         self._status = ServiceStatus.INITIALIZING
 
         self._client = aiosmtplib.SMTP(
@@ -109,13 +109,13 @@ class EmailService(BaseService):
         self._status = ServiceStatus.READY
 
     async def shutdown(self) -> None:
-        """Fermer la connexion SMTP."""
+        """Close SMTP connection."""
         if self._client:
             await self._client.quit()
         self._status = ServiceStatus.STOPPED
 
     async def health_check(self) -> tuple[bool, str]:
-        """Vérifier la connexion SMTP."""
+        """Check SMTP connection."""
         try:
             await self._client.noop()
             return True, f"Connected to {self.smtp_host}:{self.smtp_port}"
@@ -123,7 +123,7 @@ class EmailService(BaseService):
             return False, str(e)
 
     def status(self) -> dict:
-        """État du service."""
+        """Service status."""
         return {
             "name": self.name,
             "status": self._status.value,
@@ -138,7 +138,7 @@ class EmailService(BaseService):
         body: str,
         html: str | None = None
     ) -> dict:
-        """Envoyer un email."""
+        """Send an email."""
         message = EmailMessage()
         message["From"] = self.username
         message["To"] = to
@@ -160,7 +160,7 @@ class EmailService(BaseService):
         subject: str,
         body: str
     ) -> dict:
-        """Envoyer en masse."""
+        """Send bulk emails."""
         results = []
         for recipient in recipients:
             try:
@@ -172,10 +172,10 @@ class EmailService(BaseService):
         return {"results": results}
 ```
 
-### 2. Configurer l'Extension
+### 2. Configure the Extension
 
 ```yaml
-# xcore.yaml
+# integration.yaml
 services:
   extensions:
     email:
@@ -188,7 +188,7 @@ services:
         tls: true
 ```
 
-### 3. Utiliser dans un Plugin
+### 3. Use in a Plugin
 
 ```python
 from xcore.sdk import TrustedBase, ok
@@ -206,9 +206,9 @@ class NotificationPlugin(TrustedBase):
 
             await self.email.send_email(
                 to=user_email,
-                subject="Bienvenue !",
-                body=f"Bonjour {username}, bienvenue sur notre plateforme !",
-                html=f"<h1>Bonjour {username}</h1><p>Bienvenue !</p>"
+                subject="Welcome!",
+                body=f"Hello {username}, welcome to our platform!",
+                html=f"<h1>Hello {username}</h1><p>Welcome!</p>"
             )
 
             return ok(message="Email sent")
@@ -224,9 +224,9 @@ class NotificationPlugin(TrustedBase):
         return ok()
 ```
 
-## Exemples de Services
+## Service Examples
 
-### Service de Stockage S3
+### S3 Storage Service
 
 ```python
 # myapp/services/storage.py
@@ -235,7 +235,7 @@ import aioboto3
 
 
 class S3StorageService(BaseService):
-    """Service de stockage S3."""
+    """S3 storage service."""
 
     name = "storage"
 
@@ -245,7 +245,7 @@ class S3StorageService(BaseService):
         self.region = config.get("region", "us-east-1")
         self.access_key = config.get("access_key")
         self.secret_key = config.get("secret_key")
-        self.endpoint_url = config.get("endpoint_url")  # Pour MinIO
+        self.endpoint_url = config.get("endpoint_url")  # For MinIO
         self._session = None
         self._client = None
 
@@ -287,7 +287,7 @@ class S3StorageService(BaseService):
         }
 
     async def upload(self, key: str, data: bytes, content_type: str = "application/octet-stream") -> str:
-        """Uploader un fichier."""
+        """Upload a file."""
         async with self._client as client:
             await client.put_object(
                 Bucket=self.bucket,
@@ -298,19 +298,19 @@ class S3StorageService(BaseService):
         return f"s3://{self.bucket}/{key}"
 
     async def download(self, key: str) -> bytes:
-        """Télécharger un fichier."""
+        """Download a file."""
         async with self._client as client:
             response = await client.get_object(Bucket=self.bucket, Key=key)
             return await response["Body"].read()
 
     async def delete(self, key: str) -> bool:
-        """Supprimer un fichier."""
+        """Delete a file."""
         async with self._client as client:
             await client.delete_object(Bucket=self.bucket, Key=key)
         return True
 
     async def list_objects(self, prefix: str = "") -> list[dict]:
-        """Lister les objets."""
+        """List objects."""
         async with self._client as client:
             response = await client.list_objects_v2(
                 Bucket=self.bucket,
@@ -326,7 +326,7 @@ class S3StorageService(BaseService):
             ]
 ```
 
-Configuration :
+Configuration:
 
 ```yaml
 services:
@@ -338,11 +338,11 @@ services:
         region: "${AWS_REGION}"
         access_key: "${AWS_ACCESS_KEY}"
         secret_key: "${AWS_SECRET_KEY}"
-        # Pour MinIO
+        # For MinIO
         # endpoint_url: "http://localhost:9000"
 ```
 
-### Service de Paiement Stripe
+### Stripe Payment Service
 
 ```python
 # myapp/services/payments.py
@@ -351,7 +351,7 @@ import stripe
 
 
 class StripeService(BaseService):
-    """Service de paiement Stripe."""
+    """Stripe payment service."""
 
     name = "payments"
 
@@ -365,7 +365,7 @@ class StripeService(BaseService):
     async def init(self) -> None:
         self._status = ServiceStatus.INITIALIZING
 
-        # Vérifier la clé API
+        # Verify API key
         try:
             stripe.Account.retrieve()
         except stripe.error.AuthenticationError as e:
@@ -396,7 +396,7 @@ class StripeService(BaseService):
         currency: str = "eur",
         metadata: dict | None = None
     ) -> dict:
-        """Créer un payment intent."""
+        """Create a payment intent."""
         intent = stripe.PaymentIntent.create(
             amount=amount,
             currency=currency,
@@ -417,7 +417,7 @@ class StripeService(BaseService):
         }
 
     async def confirm_payment(self, payment_intent_id: str) -> dict:
-        """Confirmer un paiement."""
+        """Confirm a payment."""
         intent = stripe.PaymentIntent.confirm(payment_intent_id)
         return {
             "id": intent.id,
@@ -426,7 +426,7 @@ class StripeService(BaseService):
         }
 
     async def create_customer(self, email: str, name: str | None = None) -> dict:
-        """Créer un client."""
+        """Create a customer."""
         customer = stripe.Customer.create(
             email=email,
             name=name
@@ -438,7 +438,7 @@ class StripeService(BaseService):
         customer_id: str,
         price_id: str
     ) -> dict:
-        """Créer un abonnement."""
+        """Create a subscription."""
         subscription = stripe.Subscription.create(
             customer=customer_id,
             items=[{"price": price_id}]
@@ -450,7 +450,7 @@ class StripeService(BaseService):
         }
 ```
 
-### Service de Cache Distribué
+### Distributed Cache Service
 
 ```python
 # myapp/services/distributed_cache.py
@@ -461,7 +461,7 @@ import pickle
 
 
 class DistributedCacheService(BaseService):
-    """Service de cache distribué avec Redis."""
+    """Distributed cache service with Redis."""
 
     name = "distributed_cache"
 
@@ -505,7 +505,7 @@ class DistributedCacheService(BaseService):
         }
 
     async def get(self, key: str, default=None) -> any:
-        """Récupérer une valeur."""
+        """Retrieve a value."""
         value = await self._redis.get(key)
 
         if value is None:
@@ -521,7 +521,7 @@ class DistributedCacheService(BaseService):
         value: any,
         ttl: int | None = None
     ) -> bool:
-        """Stocker une valeur."""
+        """Store a value."""
         serialized = pickle.dumps(value)
         await self._redis.set(
             key,
@@ -531,33 +531,33 @@ class DistributedCacheService(BaseService):
         return True
 
     async def delete(self, key: str) -> bool:
-        """Supprimer une clé."""
+        """Delete a key."""
         await self._redis.delete(key)
         return True
 
     async def exists(self, key: str) -> bool:
-        """Vérifier si une clé existe."""
+        """Check if a key exists."""
         return await self._redis.exists(key) > 0
 
     async def increment(self, key: str, amount: int = 1) -> int:
-        """Incrémenter un compteur."""
+        """Increment a counter."""
         return await self._redis.incrby(key, amount)
 
     async def expire(self, key: str, ttl: int) -> bool:
-        """Définir l'expiration d'une clé."""
+        """Set expiration for a key."""
         return await self._redis.expire(key, ttl)
 
     async def clear_pattern(self, pattern: str) -> int:
-        """Supprimer toutes les clés correspondant à un pattern."""
+        """Delete all keys matching a pattern."""
         keys = await self._redis.keys(pattern)
         if keys:
             await self._redis.delete(*keys)
         return len(keys)
 ```
 
-## Intégration avec le Event Bus
+## Integration with Event Bus
 
-Les services peuvent émettre des événements :
+Services can emit events:
 
 ```python
 from xcore.kernel.events.bus import EventBus
@@ -571,9 +571,9 @@ class EmailService(BaseService):
         self._event_bus = EventBus()
 
     async def send_email(self, to: str, subject: str, body: str) -> dict:
-        # ... envoi de l'email ...
+        # ... send email ...
 
-        # Émettre un événement
+        # Emit an event
         await self._event_bus.emit("email.sent", {
             "to": to,
             "subject": subject,
@@ -583,7 +583,7 @@ class EmailService(BaseService):
         return {"sent": True}
 ```
 
-Dans le plugin :
+In the plugin:
 
 ```python
 class Plugin(TrustedBase):
@@ -591,16 +591,16 @@ class Plugin(TrustedBase):
     async def on_load(self) -> None:
         self.email = self.get_service("ext.email")
 
-        # S'abonner aux événements du service
+        # Subscribe to service events
         self.email._event_bus.on("email.sent", self._on_email_sent)
 
     async def _on_email_sent(self, event):
         print(f"Email sent to {event.data['to']}")
 ```
 
-## Intégration avec les Hooks
+## Integration with Hooks
 
-Les services peuvent aussi utiliser le HookManager :
+Services can also use the HookManager:
 
 ```python
 from xcore.kernel.events.hooks import HookManager
@@ -613,22 +613,22 @@ class PaymentService(BaseService):
         self.config = config
         self._hooks = HookManager()
 
-        # Enregistrer des hooks par défaut
+        # Register default hooks
         @self._hooks.on("payment.before_process", priority=100)
         async def validate_payment(event):
             if event.data["amount"] <= 0:
                 event.cancel()
 
     async def process_payment(self, amount: int, currency: str) -> dict:
-        # Exécuter les hooks pré-traitement
+        # Execute pre-processing hooks
         await self._hooks.emit("payment.before_process", {
             "amount": amount,
             "currency": currency
         })
 
-        # Traitement du paiement...
+        # Payment processing...
 
-        # Exécuter les hooks post-traitement
+        # Execute post-processing hooks
         await self._hooks.emit("payment.after_process", {
             "amount": amount,
             "currency": currency,
@@ -638,22 +638,22 @@ class PaymentService(BaseService):
         return {"status": "completed"}
 ```
 
-## Bonnes Pratiques
+## Best Practices
 
-1. **Gestion des erreurs** — Toujours gérer les erreurs dans `init()` et `health_check()`
-2. **Timeouts** — Utiliser des timeouts dans les opérations réseau
-3. **Reconnexion** — Implémenter la logique de reconnexion si nécessaire
-4. **Métriques** — Exposer des métriques via `status()`
-5. **Clean shutdown** — Toujours fermer les connexions dans `shutdown()`
+1. **Error Handling** — Always handle errors in `init()` and `health_check()`
+2. **Timeouts** — Use timeouts in network operations
+3. **Reconnection** — Implement reconnection logic if necessary
+4. **Metrics** — Expose metrics via `status()`
+5. **Clean Shutdown** — Always close connections in `shutdown()`
 
 ```python
 class RobustService(BaseService):
-    """Exemple de service robuste."""
+    """Robust service example."""
 
     async def init(self) -> None:
         self._status = ServiceStatus.INITIALIZING
 
-        # Retry avec backoff
+        # Retry with backoff
         for attempt in range(5):
             try:
                 self._client = await self._connect(timeout=10)
@@ -668,7 +668,7 @@ class RobustService(BaseService):
 
     async def health_check(self) -> tuple[bool, str]:
         try:
-            # Timeout court pour le health check
+            # Short timeout for health check
             await asyncio.wait_for(self._client.ping(), timeout=2.0)
             return True, "OK"
         except asyncio.TimeoutError:
@@ -689,6 +689,6 @@ class RobustService(BaseService):
 
 ## Next Steps
 
-- [Services Guide](./services.md) — Utiliser les services dans les plugins
-- [Events](./events.md) — Communication inter-plugins
-- [Monitoring](./monitoring.md) — Observer les services
+- [Services Guide](./services.md) — Use services in plugins
+- [Events](./events.md) — Inter-plugin communication
+- [Monitoring](./monitoring.md) — Observe services

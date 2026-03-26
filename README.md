@@ -53,10 +53,14 @@ flowchart TB
    ```bash
    make run-dev
    ```
-### or use pip to install and use it
-    ```bash
-        uv add https://github.com/traoreera/xcore
-    ```
+
+### Using pip or uv
+
+```bash
+pip install xcore
+# or
+uv add xcore
+```
 
 ---
 
@@ -69,7 +73,7 @@ from fastapi import FastAPI
 from xcore import Xcore
 from contextlib import asynccontextmanager
 
-xcore = Xcore(config_path="xcore.yaml")
+xcore = Xcore(config_path="integration.yaml")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -84,9 +88,10 @@ app = FastAPI(lifespan=lifespan)
 
 ```python
 from xcore import Xcore
+import asyncio
 
 async def main():
-    app = Xcore()
+    app = Xcore(config_path="integration.yaml")
     await app.boot()
     
     # Call a plugin action
@@ -94,6 +99,9 @@ async def main():
     print(result)
     
     await app.shutdown()
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
 ---

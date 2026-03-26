@@ -530,6 +530,6 @@ class Plugin(TrustedBase):
 
 ## Next Steps
 
-- [Testing Security](testing-security.md)
-- [Audit Logging](audit-logging.md)
-- [Compliance Guide](compliance.md)
+- [Testing](../development/testing.md)
+- [Monitoring](monitoring.md)
+- [Architecture](../architecture/overview.md)
